@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows-WebSocket 聊天应用</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f7f7f7;
+        }
+
+        h1 {
+            font-weight: bold;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #online-count {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+            height: 300px;
+            overflow-y: scroll;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #f2f2f2;
+        }
+
+        #send {
+            width: 100px;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #3498db;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .message {
+            margin-bottom: 10px;
+        }
+
+        .message-sender {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .message-content {
+            background-color: #f2f2f2;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebSocket 聊天应用</h1>
+    <div id="online-count">当前在线人数：</div>
+    <div id="messages"></div>
+    <input type="text" id="input" placeholder="输入消息..." />
+    <button id="send">发送</button>
+
+    <script>
+        // 客户端
+        // 1. 监听消息
+        // 2. 发送消息
+        // 3. 统计人数 
+        const socket = new WebSocket('ws://localhost:3000/chat');
+        const messagesElement = document.getElementById('messages');
+        const inputElement = document.getElementById('input');
+        // 1. 获取到按钮
+        const sendButton = document.getElementById('send');
+        const onlineCountElement = document.getElementById('online-count');
+
+        // 连接成功时触发
+        socket.addEventListener('open', (event) => {
+            console.log('Connected to WebSocket');
+        });
+
+        // 接收到消息时触发  4. 监听到发送的消息
+        socket.addEventListener('message', (event) => {
+            const message = JSON.parse(event.data);
+
+            if (message.type === 'welcome') {
+                // 接收到欢迎消息，直接显示
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message');
+                messageElement.innerText = message.content;
+                messagesElement.appendChild(messageElement);
+            } else if (message.type === 'onlineCount') {
+                // 接收到在线人数更新消息，更新显示
+                onlineCountElement.innerText = `当前在线人数：${message.count}`;
+            } else if (message.type === 'chatMessage') {
+                // 接收到聊天消息，显示发送者和内容
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message');
+
+                const senderElement = document.createElement('div');
+                senderElement.classList.add('message-sender');
+                senderElement.innerText = `${message.sender}:`;
+                messageElement.appendChild(senderElement);
+
+                const contentElement = document.createElement('div');
+                contentElement.classList.add('message-content');
+                contentElement.innerText = message.content;
+                messageElement.appendChild(contentElement);
+
+                messagesElement.appendChild(messageElement);
+
+                // 滚动到最底部
+                messagesElement.scrollTop = messagesElement.scrollHeight;
+            }
+        });
+
+        // 2.监听点击事件  发送消息
+        sendButton.addEventListener('click', () => {
+            const message = inputElement.value;
+            if (message.trim() !== '') {
+                // 3.发送消息 
+                socket.send(message);
+                inputElement.value = '';
+            }
+        });
+
+        // 按下 Enter 键发送消息
+        inputElement.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                const message = inputElement.value;
+                if (message.trim() !== '') {
+                    socket.send(message);
+                    inputElement.value = '';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
